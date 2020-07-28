@@ -1,0 +1,13 @@
+name: Caret_Snakemake
+channels:
+- conda-forge
+- bioconda
+- nodefaults
+dependencies:
+- conda-forge::python=3.*
+- bioconda::snakemake=5.12.*
+- conda-forge::r-base=3.5.* 
+- conda-forge::r-tidyverse
+- conda-forge::r-caret
+- conda-forge::r-argparser
+- conda-forge::r-doParallel
