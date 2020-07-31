@@ -1,0 +1,42 @@
+######################################
+# CaretSnakemake default config file
+######################################
+
+#Analysis output directory
+Outdir: ""
+
+#Setting for preparing data structures to model
+Data:
+ #data file to read in (samples as rows, features as columns, first row as col headers)
+ file: ""
+ #name of class column
+ classcol: ""
+ #name of an columns to be removed (comma seperated list, e.g. sample names)
+ removecol: ""
+ #seed for random subsetting of data table
+ seed: "808"
+ #training percentage (how much of the data is training vs test)
+ trainingper: "66"
+
+#Modelling parameters
+Modelling:
+ #comma seperated list of models to run (see caret docs for list of possibilities)
+ modlist: "ada,glmnet,LogitBoost"
+ #comma seperate list of pre-processing to carry out before modelling (see caret docs for possibilities)
+ prepro: "scale,center"
+ #maximum number of threads to use for each model
+ threads: "4"
+ #k for k cross fold validation
+ cvk: "5"
+ #number of times to repeat k cross fold validation
+ cvrepeat: "5"
+ #method to chose optimal model from caret parameterisation
+ selectfunction: "best"
+ #seed to use for modelling
+ seed: "808"
+ #metric to use to score model performance
+ #options Accuracy, Kappa, AUC, prAUC, Balanced_Accuracy
+ metric: "Kappa"
+ #should the metric be maximised in the best model (BOOLEAN)
+ metricmax: "TRUE"
+ 

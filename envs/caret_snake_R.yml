@@ -1,0 +1,49 @@
+#this has a selection of useful caret packages
+#to install more, run once to get a list of missing packages then install manually into the conda created by snakemake
+name: caret_snake_R
+channels:
+- conda-forge
+- bioconda
+- anaconda
+dependencies:
+- r-base 
+- r-tidyverse
+- r-argparser
+- r-doParallel
+- r-caret
+- r-BradleyTerry2
+- r-e1071
+- r-earth
+- r-fastICA
+- r-gam
+- r-ipred
+- r-kernlab
+- r-knitr
+- r-klaR
+- r-MASS
+- r-ellipse
+- r-mda
+- r-mgcv
+- r-mlbench
+- r-MLmetrics
+- r-nnet
+- r-party
+- r-pls
+- r-proxy
+- r-randomForest
+- r-RANN
+- r-spls
+- r-subselect
+- r-pamr
+- r-superpc
+- r-Cubist
+- r-testthat
+- r-rpart
+- r-dplyr
+- r-covr
+- r-ada
+- r-glmnet
+- r-ggrepel
+- r-plotly
+- r-pROC
+- r-yaml

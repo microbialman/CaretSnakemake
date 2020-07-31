@@ -1,6 +1,4 @@
 #load packages
-library(tidyverse, quietly=TRUE)
-library(caretEnsemble, quietly=TRUE)
 library(caret, quietly=TRUE)
 library(argparser, quietly=TRUE)
 
@@ -10,12 +8,11 @@ p <- arg_parser("Set-up test and train datasets and trainControl object for mode
 p <- add_argument(p, "--file", help="Pre-prepared data file with all observations")
 p <- add_argument(p, "--classcol", help="Column header for classification column") 
 p <- add_argument(p,"--removecol", help="Columns to be removed (comma seperated list of names)")
-p <- add_argument(p, "--seed", help="Seed for randomisation") 
-p <- add_argument(p, "--trainingper", help="Set the % of data for training (out of 100), remainder used for testing")
-p <- add_argument(p, "--cv_k", help="Set the k for k-fold cross-validation during training")
-p <- add_argument(p, "--cv_repeats", help="Set the number of times to repeat k-fold CV during training")
-p <- add_argument(p, "--summaryfunction", help="Function for summarising model fit (see caret documentation)")
-p <- add_argument(p, "--selectfunction", help="Function for selecting optimal model (see caret documentation)")
+p <- add_argument(p, "--seed", help="Seed for randomisation", default = "808") 
+p <- add_argument(p, "--trainingper", help="Set the % of data for training (out of 100), remainder used for testing", default = "60")
+p <- add_argument(p, "--cv_k", help="Set the k for k-fold cross-validation during training", default = "10")
+p <- add_argument(p, "--cv_repeats", help="Set the number of times to repeat k-fold CV during training", default = "5")
+p <- add_argument(p, "--selectfunction", help="Function for selecting optimal model (see caret documentation)", default = "best")
 p <- add_argument(p, "--outdir", help="Output directory")
 
 # Parse the command line arguments
@@ -54,12 +51,12 @@ test <- as.data.frame(filtdat[-trainingRows,])
 tcontrol <- trainControl(method="repeatedcv", number=as.numeric(argv$cv_k), repeats=as.numeric(argv$cv_repeats),
                          savePredictions = "final", classProbs = T,
                          index=createMultiFolds(train[,colindex], k=as.numeric(argv$cv_k),times=as.numeric(argv$cv_repeats)),
-                         summaryFunction = get(argv$summaryfunction),
+                         summaryFunction = multiClassSummary,
                          allowParallel=T,
                          selectionFunction =argv$selectfunction)
 
 #write the objects to the output directory
-save(datafile,filtdat,train,test,tcontrol,file = paste0(argv$outdir,"/structured_data.R"))
+save(datafile,filtdat,train,test,tcontrol,colindex,file = paste0(argv$outdir,"/structured_data.rda"))
 
 
 

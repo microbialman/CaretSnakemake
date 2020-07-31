@@ -1,0 +1,507 @@
+---
+title: "Caret Snakemake Report"
+output:
+  html_document: default
+  pdf_document: default
+date: "`r Sys.Date()`"
+params:
+  classcol: Decline
+  combinedlog: ~/devel/caret_pilot/test_mods/Report/combined.log
+  metric: Kappa
+  outdir: ~/devel/caret_pilot/test_mods
+  structured: ~/devel/caret_pilot/test_mods/structured_data.rda
+  configfile: ~/devel/caret_pilot/test.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include=TRUE, message=FALSE)
+library(tidyverse)
+library(knitr)
+library(caret)
+library(ggrepel)
+library(plotly)
+library(pROC)
+library(yaml)
+```
+
+```{r modsum}
+#load in the log to see what models crashed and why
+comblog <- read_delim(params$combinedlog, delim=";",col_names = c("Model","Status","Additional_Info"), col_types = cols(), quote="") %>% arrange(order(.$Status)) %>% data.frame()
+comblog <- data.frame(lapply(comblog, function(x) {gsub('"', '', x)}))
+```
+
+## Pipeline run
+
+A total of **`r nrow(comblog)`** models were run and **`r length(which(comblog$Status=="MODEL_COMPLETE"))`** completed training without errors.
+
+See the table at end of report for further details of each model run.
+
+```{r load_models, warning=F}
+#get succesful models
+compmods <- comblog %>% filter(Status=="MODEL_COMPLETE") %>% pull(Model)
+
+#read in the models
+readfun <- function(x){
+  return(readRDS(paste0(params$outdir,"/Models/",x,".rds")))
+}
+modlist <- lapply(compmods,readfun)
+names(modlist) <- compmods
+
+```
+
+## Performance on training data
+
+Models were trained to maximise **`r params$metric`** and are ordered based on this metric in the following plots.
+
+*Note: AUC values below are based on the multi-class AUC. For binary classifications the binary AUC is available below.*
+
+$~$
+
+```{r plot_train, warning=F, out.width="100%"}
+#put the training metric used at top of list
+allmetlist <- c("AUC","prAUC","Accuracy","Kappa","Balanced_Accuracy")
+metlist <- c(params$metric,allmetlist[which(allmetlist!=params$metric)])
+
+#function to get the training metrics for the optimal parameter for each model
+getMetricsBest <- function(x){
+  bestparams <- x$bestTune
+  paramstab <- x$results[colnames(bestparams)]
+  bestrow <- which(apply(paramstab, 1, function(x) all(x==bestparams)==TRUE))
+  met <- as.list(x$results[bestrow,which(colnames(x$results)%in%metlist)])
+  metsd <- as.list(x$results[bestrow,which(colnames(x$results)%in%paste0(metlist,"SD"))])
+  met <- met[match(metlist,names(met))]
+  met[sapply(met, is.null)] <- NA
+  metsd <- metsd[match(paste0(metlist,"SD"),names(metsd))]
+  metsd[sapply(metsd, is.null)] <- NA
+  df <- data.frame(Model=rep(x$method,length(met)),Metric=names(met),Train_Value=unlist(met),SD=unlist(metsd))
+  return(df)
+}
+
+bestMets <- bind_rows(lapply(modlist,getMetricsBest)) %>% filter(!is.na(Train_Value))
+#order by the value of the training metric
+trmet <- bestMets %>% filter(Metric==params$metric) %>% arrange(Train_Value)
+bestMets$Model <- factor(bestMets$Model,levels=unique(trmet$Model))
+bestMets$ModMet <- paste0(bestMets$Model,bestMets$Metric)
+
+train_fig <- plot_ly(
+  bestMets,
+  x = ~Model,
+  y = ~Train_Value,
+  type = 'scatter',
+  mode = "markers",
+  error_y = ~list(array=SD,color="#000000"),
+  transforms = list(
+      list(
+        type = 'filter',
+        target = ~Metric,
+        operation = '=',
+        value = params$metric
+      )
+  )
+)  %>% layout(title="Mean and SD of metric across n reapeated k-fold CV for optimal parameters.")
+
+dropbutton <- function(val){
+return(list(method = "restyle",args = list("transforms[0].value", val) ,label = val))}
+
+train_fig %>% layout(
+    updatemenus = list(
+      list(
+        active = 0, 
+        showactive = TRUE,
+        type = 'dropdown',
+        buttons = lapply(metlist,dropbutton)
+    )
+  )
+)
+
+
+```
+
+$~$
+
+## Performance on test data
+
+*Note: AUC values below are based on the multi-class AUC. For binary classifications the binary AUC is available below.*
+
+$~$
+
+```{r run_test, warnings=F, message=F, echo=FALSE,results='hide'}
+#load in the test data
+load(params$structured)
+
+mcs <- function(x){
+  predresp <- predict(x, newdata = test, type="raw")
+  preddf <- data.frame(obs=pull(test,params$classcol),pred=predresp)
+  predprob <- try(predict(x, newdata = test, type="prob"))
+  if(class(predprob)!="try-error"){
+     preddf <- cbind(preddf,predprob) 
+  }
+  values <- multiClassSummary(preddf,lev=as.character(unique(preddf$obs)))
+  values <- values[match(metlist,names(values))]
+  values[sapply(values, is.null)] <- NA
+  names(values) <- metlist
+  return(values)
+}
+
+#run each model on the test set
+predscores <- lapply(modlist, mcs)
+longscores <- bind_rows(predscores) %>% data.frame() %>% add_column(Metric=names(predscores[[1]])) %>% gather("Model","Test_Value",-Metric) %>% filter(!is.na(Test_Value)) %>% add_column(ModMet=paste0(.$Model,.$Metric))
+longscores <- longscores[match(bestMets$ModMet,longscores$ModMet),]
+combMets <- bestMets %>% add_column(Test_Value=longscores$Test_Value)
+
+test_fig <- plot_ly(
+  data = combMets,
+  x = ~Train_Value,
+  y = ~Test_Value,
+  text = ~Model,
+  type = 'scatter',
+  transforms = list(
+      list(
+        type = 'filter',
+        target = ~Metric,
+        operation = '=',
+        value = params$metric
+      )
+  )
+)
+
+```
+```{r plot_test_fig, out.width="100%"}
+test_fig %>% layout(
+  title="Metric comparison - mean in training vs prediction on test data.",
+    updatemenus = list(
+      list(
+        active = 0, 
+        showactive = TRUE,
+        type = 'dropdown',
+        buttons = lapply(metlist,dropbutton)
+    )
+  )
+)
+```
+
+$~$
+
+## Binary AUC
+
+Plots presenting binary AUC metrics will only be shown if a binary class has been used with models that return class probabilities.
+
+$~$
+
+```{r roc_curve, message=F, warnings=F, out.width="100%"}
+classes <- pull(test,params$classcol)
+
+auc_fig <- NULL
+roc_fig <- NULL
+
+#function to generate ROC axes
+getroc <- function(x){
+  preds <- predict(x,newdata=test,type="prob")
+  roc <- roc(classes,preds[,1],quiet=T)
+  auc <- as.numeric(roc$auc)
+  coordinates <- coords(roc, transpose = F)[,c(2,3)] %>% add_column(Model=rep(x$method,nrow(.)))
+  return(list(AUC=auc,coords=coordinates))  
+}
+
+#only if binary classes
+if(length(unique(classes))==2){
+  #get the models that return probabilities
+  prmod <- combMets %>% filter(Metric=="AUC") %>% pull(Model) %>% unique()
+  if(length(prmod)>0){
+    prmlist <- modlist[as.character(prmod)]
+    auclist <- lapply(prmlist,getroc)
+    aucs <- data.frame(AUC=unlist(lapply(auclist,"[[",1)), Model=as.character(prmod)) %>% arrange(desc(AUC)) %>%
+      mutate(Model=factor(Model,levels=unique(Model)))
+    
+    #just take the top models for now
+    nplot=length(levels(aucs$Model))
+    if(nplot>10){nplot=10}
+    topaucs <- levels(aucs$Model)[1:nplot]
+    rocframe <- bind_rows(lapply(auclist,"[[",2)) %>% filter(Model%in%topaucs)
+  auc_fig <- plot_ly(
+    aucs,
+    x = ~Model,
+    y = ~AUC,
+    type = 'bar'
+  )
+  
+  roc_fig <- plot_ly(
+    rocframe,
+    x = ~1-specificity,
+    y = ~sensitivity,
+    color = ~Model,
+    colors = "Paired",
+    type = 'scatter',
+    mode ="line"
+  )
+  
+  }
+}
+
+if(!class(auc_fig)[1]=="NULL"){
+  auc_fig %>% layout(title="Binary AUC on test data (for applicable models).")
+}
+
+if(!class(roc_fig)[1]=="NULL"){
+  roc_fig %>% layout(title="ROC curves from test data for top (up to 10) models by AUC.")
+}
+
+```
+
+$~$
+
+## Variable importance
+
+*Note: The model that appears top of the list in the individual model scores plot had the highest combined rank in the training metric when summing model rankings in both the training and test set.*
+
+$~$
+
+```{r varimp, out.width="100%"}
+getVars <- function(x){
+  vars <- try(varImp(x))
+  if(class(vars)=="try-error"){
+    return(NA)
+  }else{
+    vdf <- data.frame(vars$importance) %>% rownames_to_column("Variable") %>%
+      gather("Class","Value",-Variable) %>% add_column(Model=rep(x$method,nrow(.)))
+    return(vdf)
+  }
+}
+#get variable importance scores using caret varImp
+varlist <- lapply(modlist,getVars)
+longvars <- bind_rows(varlist[!is.na(varlist)]) %>% filter(!is.na(Value))
+
+#split methods that score classes individually or overall
+longvars_overall <- longvars %>% filter(Class=="Overall")
+longvars_class <- longvars %>% filter(Class!="Overall")
+
+#initiate the plots on the model with the highest rank training parameter across test and train
+sortcom <- combMets %>% filter(Metric==params$metric) %>%
+  add_column(train_rank=rank(.$Train_Value),test_rank=rank(.$Test_Value),combrank=train_rank+test_rank) %>%
+  arrange(desc(combrank))
+overallhighmod <- as.character(sortcom$Model[which(sortcom$Model%in%longvars_overall$Model)][1])
+classhighmod <- as.character(sortcom$Model[which(sortcom$Model%in%longvars_class$Model)][1])
+
+```
+
+### Models with overall variable importance scores
+
+```{r overall_plot}
+#order the vars by their mean across the overall dataset
+meanvar <- longvars_overall %>% group_by(Variable) %>% summarise(Mean_Importance_Score=mean(Value),SD_Importance_Score=sd(Value)) %>% arrange(Mean_Importance_Score) %>% mutate(Variable=factor(Variable,levels=as.character(unique(Variable))))
+longvars_overall <- longvars_overall %>% mutate(Variable=factor(Variable,levels=meanvar$Variable))
+
+#overall plot
+meanvarfig <- plot_ly(
+  meanvar,
+  x = ~Mean_Importance_Score,
+  y = ~Variable,
+  type = 'bar',
+  error_x = ~list(array=SD_Importance_Score,color="#000000")
+) %>% layout(title="Mean and SD of variable importance scores across all models.")
+
+meanvarfig
+
+#list of options for the overall model plot
+allmods_overall <- as.character(unique(longvars_overall$Model))
+overall_modelvarlist <- c(overallhighmod,allmods_overall[allmods_overall!=overallhighmod])
+
+overallvarfig <- plot_ly(
+  longvars_overall,
+  x = ~Value,
+  y = ~Variable,
+  type = 'bar',
+  transforms = list(
+      list(
+        type = 'filter',
+        target = ~Model,
+        operation = '=',
+        value = overallhighmod
+      )
+  )
+)
+
+overallvarfig %>% layout(
+  title="Variable importance scores per model.",
+    updatemenus = list(
+      list(
+        active = 0, 
+        showactive = TRUE,
+        type = 'dropdown',
+        buttons = lapply(overall_modelvarlist,dropbutton)
+    )
+  )
+)
+
+
+```
+
+### Models with per-class variable importance scores
+
+```{r class_plot}
+#generate means per class
+meanvar_class <- longvars_class %>% group_by(Variable,Class) %>% summarise(Mean_Importance_Score=mean(Value),SD_Importance_Score=sd(Value)) %>% ungroup() %>% mutate(Variable=factor(Variable,levels=as.character(levels(longvars_overall$Variable))))
+longvars_class <- longvars_class %>% mutate(Variable=factor(Variable,levels=levels(meanvar_class$Variable)))
+
+#class plot
+meanvarfig_class <- plot_ly(
+  meanvar_class,
+  x = ~Mean_Importance_Score,
+  y = ~Variable,
+  color = ~Class,
+  type = 'bar',
+  error_x = ~list(array=SD_Importance_Score,color="#000000")
+) %>% layout(title="Mean and SD of variable importance scores across all models.")
+
+meanvarfig_class
+
+#list of options for the overall model plot
+allmods_class <- as.character(unique(longvars_class$Model))
+class_modelvarlist <- c(classhighmod,allmods_class[allmods_class!=classhighmod])
+
+classvarfig <- plot_ly(
+  longvars_class,
+  x = ~Value,
+  y = ~Variable,
+  color = ~Class,
+  customdata = ~Model,
+  type = 'bar',
+  transforms = list(
+      list(
+        type = 'filter',
+        target = "customdata",
+        operation = '=',
+        value = classhighmod
+      )
+  )
+)
+
+
+classvarfig %>% layout(
+  title="Variable importance scores per model.",
+  barmode="group",
+    updatemenus = list(
+      list(
+        active = 0, 
+        showactive = TRUE,
+        type = 'dropdown',
+        buttons = lapply(class_modelvarlist,dropbutton)
+    )
+  )
+)
+
+```
+
+$~$
+
+## Variables by class (as continuous)
+
+Values below are across the whole dataset (training and testing combined).
+
+$~$
+
+```{r var_by_class, out.width="100%"}
+#get the dataframe for all values, dropping columns not used in the modelling
+allvars <- datafile %>% select(colnames(train))
+#make a long format
+vallist <- rev(levels(meanvar$Variable))
+longvals <- allvars %>% gather("Variable","Value",-params$classcol) %>% mutate(Variable=factor(Variable,levels=vallist)) %>% rename(Class=params$classcol)
+
+varclassfig <- plot_ly(
+  longvals,
+  x = ~ Class,
+  y = ~ Value,
+  type = 'violin',
+  points = 'all',
+  jitter = 0.5,
+  transforms = list(
+      list(
+        type = 'filter',
+        target = ~Variable,
+        operation = '=',
+        value = vallist[1]
+      )
+  )
+)
+
+varclassfig %>% layout(
+  title="Variable importance scores per model.",
+  xaxis=list(title=params$classcol),
+    updatemenus = list(
+      list(
+        active = 0, 
+        showactive = TRUE,
+        type = 'dropdown',
+        buttons = lapply(vallist,dropbutton)
+    )
+  )
+)
+
+```
+
+$~$
+
+## Variables by class (as bins)
+
+Values below are across the whole dataset (training and testing combined).
+
+$~$
+
+```{r var_by_class_bins, out.width="100%"}
+varclassfig2d <- plot_ly(
+  longvals,
+  x = ~ Class,
+  y = ~ Value,
+  type = 'histogram2d',
+  transforms = list(
+      list(
+        type = 'filter',
+        target = ~Variable,
+        operation = '=',
+        value = vallist[1]
+      )
+  )
+)
+
+varclassfig2d %>% layout(
+  title="Variable importance scores per model.",
+  xaxis=list(title=params$classcol),
+    updatemenus = list(
+      list(
+        active = 0, 
+        showactive = TRUE,
+        type = 'dropdown',
+        buttons = lapply(vallist,dropbutton)
+    )
+  )
+)
+
+```
+
+
+$~$
+
+## Models run
+
+$~$
+
+```{r kab_tab}
+kable(comblog)
+```
+
+$~$
+
+## Configuration details
+
+$~$
+
+```{r config}
+config <- read_yaml(params$configfile)
+config_df <- t(data.frame(config))
+colnames(config_df) <- "Parameter"
+kable(config_df),
+```
+
+
+
+
