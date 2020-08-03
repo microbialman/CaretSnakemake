@@ -4,15 +4,15 @@ output:
   html_document: default
 date: "`r Sys.Date()`"
 params:
-  classcol: Decline
-  combinedlog: ~/devel/caret_pilot/test_mods/Report/combined.log
+  classcol: NULL
+  combinedlog: NULL 
   metric: Kappa
-  outdir: ~/devel/caret_pilot/test_mods
-  configfile: ~/devel/caret_pilot/test.yml
+  outdir: NULL
+  configfile: NULL 
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, include=TRUE, message=FALSE)
+knitr::opts_chunk$set(echo = FALSE, include=TRUE, message=FALSE,warning=F)
 library(tidyverse)
 library(knitr)
 library(caret)
@@ -272,7 +272,7 @@ $~$
 
 $~$
 
-```{r varimp, out.width="100%"}
+```{r varimp, include=F}
 getVars <- function(x){
   vars <- try(varImp(x))
   if(class(vars)=="try-error"){
@@ -468,11 +468,11 @@ varclassfig2d <- plot_ly(
   longvals,
   x = ~ Class,
   y = ~ Value,
-  type = 'histogram2d',
+  customdata = ~Variable,
   transforms = list(
       list(
         type = 'filter',
-        target = ~Variable,
+        target = "customdata",
         operation = '=',
         value = vallist[1]
       )
@@ -490,7 +490,7 @@ varclassfig2d %>% layout(
         buttons = lapply(vallist,dropbutton)
     )
   )
-)
+) %>% add_histogram2d()
 
 ```
 
