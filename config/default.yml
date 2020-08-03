@@ -4,6 +4,8 @@
 
 #Analysis output directory
 Outdir: ""
+#path to this config file (only used to copy config into report)
+Configfile: ""
 
 #Setting for preparing data structures to model
 Data:

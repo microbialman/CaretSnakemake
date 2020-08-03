@@ -2,14 +2,12 @@
 title: "Caret Snakemake Report"
 output:
   html_document: default
-  pdf_document: default
 date: "`r Sys.Date()`"
 params:
   classcol: Decline
   combinedlog: ~/devel/caret_pilot/test_mods/Report/combined.log
   metric: Kappa
   outdir: ~/devel/caret_pilot/test_mods
-  structured: ~/devel/caret_pilot/test_mods/structured_data.rda
   configfile: ~/devel/caret_pilot/test.yml
 ---
 
@@ -32,9 +30,24 @@ comblog <- data.frame(lapply(comblog, function(x) {gsub('"', '', x)}))
 
 ## Pipeline run
 
-A total of **`r nrow(comblog)`** models were run and **`r length(which(comblog$Status=="MODEL_COMPLETE"))`** completed training without errors.
+A total of **`r nrow(comblog)`** models were run to classify **`r params$classcol`**. **`r length(which(comblog$Status=="MODEL_COMPLETE"))`** models completed training without errors.
 
-See the table at end of report for further details of each model run.
+*See the table at end of report for further details of each model run.*
+
+Training and testing datasets contained the following class sizes:
+
+```{r}
+#load in the data
+load(paste0(params$outdir,"/structured_data.rda"))
+
+#tabulate classes in test and train
+tetr_size <- data.frame(class=c(as.character(train[,params$classcol]),as.character(test[,params$classcol])),set=c(rep("Train",nrow(train)),rep("Test",nrow(test))))
+
+kable(table(tetr_size$set,tetr_size$class), caption=paste0("Categories in ",params$classcol," classes."))
+
+```
+
+
 
 ```{r load_models, warning=F}
 #get succesful models
@@ -66,7 +79,12 @@ metlist <- c(params$metric,allmetlist[which(allmetlist!=params$metric)])
 getMetricsBest <- function(x){
   bestparams <- x$bestTune
   paramstab <- x$results[colnames(bestparams)]
-  bestrow <- which(apply(paramstab, 1, function(x) all(x==bestparams)==TRUE))
+  bestrow <- NA
+  for(i in 1:nrow(paramstab)){
+    if(all(paramstab[i,]==bestparams)==TRUE){
+      bestrow <- i
+    }
+  }
   met <- as.list(x$results[bestrow,which(colnames(x$results)%in%metlist)])
   metsd <- as.list(x$results[bestrow,which(colnames(x$results)%in%paste0(metlist,"SD"))])
   met <- met[match(metlist,names(met))]
@@ -126,13 +144,11 @@ $~$
 $~$
 
 ```{r run_test, warnings=F, message=F, echo=FALSE,results='hide'}
-#load in the test data
-load(params$structured)
-
 mcs <- function(x){
-  predresp <- predict(x, newdata = test, type="raw")
-  preddf <- data.frame(obs=pull(test,params$classcol),pred=predresp)
-  predprob <- try(predict(x, newdata = test, type="prob"))
+  classes <- pull(test,params$classcol)
+  predresp <- predict.train(x, newdata=test, type="raw")
+  preddf <- data.frame(obs=classes,pred=predresp)
+  predprob <- try(predict.train(x, newdata=test, type="prob"))
   if(class(predprob)!="try-error"){
      preddf <- cbind(preddf,predprob) 
   }
@@ -145,7 +161,7 @@ mcs <- function(x){
 
 #run each model on the test set
 predscores <- lapply(modlist, mcs)
-longscores <- bind_rows(predscores) %>% data.frame() %>% add_column(Metric=names(predscores[[1]])) %>% gather("Model","Test_Value",-Metric) %>% filter(!is.na(Test_Value)) %>% add_column(ModMet=paste0(.$Model,.$Metric))
+longscores <- bind_rows(predscores) %>% data.frame() %>% add_column(Model=names(predscores)) %>% gather("Metric","Test_Value",-Model) %>% filter(!is.na(Test_Value)) %>% add_column(ModMet=paste0(.$Model,.$Metric))
 longscores <- longscores[match(bestMets$ModMet,longscores$ModMet),]
 combMets <- bestMets %>% add_column(Test_Value=longscores$Test_Value)
 
@@ -493,13 +509,16 @@ $~$
 
 ## Configuration details
 
+Config shown below if path provided.
+
 $~$
 
 ```{r config}
+if(file.exists(params$configfile)){
 config <- read_yaml(params$configfile)
 config_df <- t(data.frame(config))
 colnames(config_df) <- "Parameter"
-kable(config_df),
+kable(config_df)}
 ```
 
 

@@ -9,7 +9,7 @@ modlist=config["Modelling"]["modlist"].split(",")
 #target rule
 rule all:
     input:
-        expand("{outdir}/Report/combined.log",outdir=config["Outdir"])
+        expand("{outdir}/Report/Report.html",outdir=config["Outdir"])
 
 #prepare the data
 rule dataprep:
@@ -61,4 +61,20 @@ rule mergelogs:
         expand("{outdir}/Report/combined.log",outdir=config["Outdir"])
     shell:
         "cat {input} > {output}"
+
+#generate the report
+rule makereport:
+    input:
+        expand("{outdir}/Report/combined.log",outdir=config["Outdir"])
+    params:
+        classcol=config["Data"]["classcol"],
+        metric=config["Modelling"]["metric"],
+        odir=config["Outdir"],
+        confile=config["Configfile"]
+    output:
+        expand("{outdir}/Report/Report.html",outdir=config["Outdir"])
+    conda:
+        "envs/caret_snake_R.yml"
+    shell:
+        'Rscript -e "rmarkdown::render(\'{workflow.basedir}/scripts/Make_report.Rmd\',params=list(classcol=\'{params.classcol}\', combinedlog=\'{input}\', metric=\'{params.metric}\', outdir=\'{params.odir}\', configfile=\'{params.confile}\'), output_file=\'{output}\')"'
     

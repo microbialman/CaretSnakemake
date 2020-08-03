@@ -1,5 +1,3 @@
-#this has a selection of useful caret packages
-#to install more, run once to get a list of missing packages then install manually into the conda created by snakemake
 name: caret_snake_R
 channels:
 - conda-forge

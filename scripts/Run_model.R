@@ -1,6 +1,7 @@
 #load packages
 library(caret, quietly=TRUE)
 library(doParallel)
+library(tidyverse)
 library(argparser, quietly=TRUE)
 
 #setup parser
@@ -56,9 +57,13 @@ if(!is.na(argv$prepro)){
   prepro <- strsplit(argv$prepro,",")[[1]]
 }
 
+classes <- train[,colindex]
+variables <-train[,-colindex]
+
 #train the model
-mod <- try(train(form=as.formula(paste0(classcol,"~.")),
-      data=train,
+mod <- try(train(
+      x=variables,
+      y=classes,
       method=argv$model,
       metric=argv$metric,
       preProcess=prepro,
