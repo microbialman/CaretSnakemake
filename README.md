@@ -1,4 +1,4 @@
-## CaretSnakemake
+# CaretSnakemake
 
 A [Snakemake](https://github.com/snakemake/snakemake) pipeline to automate training of multiple machine learning algorithms on a dataset using the [caret](https://github.com/topepo/caret) package.
 This enables concurrent training of multiple models on a compute cluster.
@@ -38,7 +38,7 @@ Additional arguments are required to submit to a cluster and will depend on the 
 The pipeline will produce all output into the directory specified in the configuration file.
 This folder will contain individual R objects for each model fit and Report.html, an interactive report summarising model metrics.
 
-## Notes
+### Notes
 
 [caret](https://github.com/topepo/caret) is a wrapper for numerous other machine learning R packages. The pipeline will attempt to install missing packages and dependencies in the modelling stage where possible. However, some packages are not available via CRAN and specific methods may require manual installation. An easy method to see which packages are not installed automatically (but required by the chosen methods) is to run the pipeline once and get the list of missing packages from the table at the end of Report.html.
 
