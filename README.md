@@ -42,7 +42,7 @@ This folder will contain individual R objects for each model fit and Report.html
 
 [caret](https://github.com/topepo/caret) is a wrapper for numerous other machine learning R packages. The pipeline will attempt to install missing packages and dependencies in the modelling stage where possible. However, some packages are not available via CRAN and specific methods may require manual installation. An easy method to see which packages are not installed automatically (but required by the chosen methods) is to run the pipeline once and get the list of missing packages from the table at the end of Report.html.
 
-To install any packages manually you will need to have run the CaretSnakemake pipeline at least once to generate the conda environment (this will be placed in .snakemake/conda/ and have a random alphanumeric name). You then need to activate this (`bash conda activate .snakemake/conda/abc123`) then run R and install packages as required. Alternatively, you can add packages to the conda environment yaml in the envs directory, however when using many different algorithms conda can have trouble solving the environment.
+To install any packages manually you will need to have run the CaretSnakemake pipeline at least once to generate the conda environment (this will be placed in .snakemake/conda/ and have a random alphanumeric name). You then need to activate this (`conda activate .snakemake/conda/abc123`) then run R and install packages as required. Alternatively, you can add packages to the conda environment yaml in the envs directory, however when using many different algorithms conda can have trouble solving the environment.
 
 
 
