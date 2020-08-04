@@ -13,8 +13,8 @@ Data:
  file: ""
  #name of class column
  classcol: ""
- #name of an columns to be removed (comma seperated list, e.g. sample names)
- removecol: ""
+ #name of an columns to be removed (comma seperated list, e.g. sample names) (NULL for none)
+ removecol: "NULL"
  #seed for random subsetting of data table
  seed: "808"
  #training percentage (how much of the data is training vs test)
@@ -24,7 +24,7 @@ Data:
 Modelling:
  #comma seperated list of models to run (see caret docs for list of possibilities)
  modlist: "ada,glmnet,LogitBoost"
- #comma seperate list of pre-processing to carry out before modelling (see caret docs for possibilities)
+ #comma seperate list of pre-processing to carry out before modelling (see caret docs for possibilities) (NULL for none)
  prepro: "scale,center"
  #maximum number of threads to use for each model
  threads: "4"

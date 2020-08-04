@@ -12,7 +12,7 @@ p <- add_argument(p, "--model", help="Model to run, using Caret nomenclature")
 p <- add_argument(p, "--seed", help="Seed for randomisation", default = "808") 
 p <- add_argument(p, "--metric", help="Summary metric to use for selecting best model (see caret documentation)", default = "Kappa")
 p <- add_argument(p, "--metricmax", help="Should the summary metric be maximised for the optimal model", default = TRUE)
-p <- add_argument(p, "--prepro", help="Comma seperated list of pre-processing steps to carry out")
+p <- add_argument(p, "--prepro", help="Comma seperated list of pre-processing steps to carry out", default=NULL)
 p <- add_argument(p, "--threads", help="Threads for parallel processing")
 p <- add_argument(p, "--outdir", help="Output directory")
 
@@ -53,9 +53,10 @@ set.seed(as.numeric(argv$seed))
 
 #prep the preprocessing vector
 prepro <- c()
+if(argv$prepro!="NULL"){
 if(!is.na(argv$prepro)){
   prepro <- strsplit(argv$prepro,",")[[1]]
-}
+}}
 
 classes <- train[,colindex]
 variables <-train[,-colindex]
