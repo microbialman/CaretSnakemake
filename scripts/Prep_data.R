@@ -34,8 +34,8 @@ if(!is.na(argv$removecol)){
   filtdat <- datafile
 }
 colindex <- which(colnames(filtdat)==argv$classcol)
-#make sure class is a factor
-filtdat[,colindex] <- factor(filtdat[,colindex])
+#make sure class is a factor and valid variable name
+filtdat[,colindex] <- factor(paste0("Class_",as.character(filtdat[,colindex])))
 
 
 #generate the data structures to train models from

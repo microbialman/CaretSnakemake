@@ -8,7 +8,7 @@ params:
   combinedlog: NULL 
   metric: Kappa
   outdir: NULL
-  configfile: NULL 
+  configfile: NULL
 ---
 
 ```{r setup, include=FALSE}
@@ -72,7 +72,10 @@ $~$
 
 ```{r plot_train, warning=F, out.width="100%"}
 #put the training metric used at top of list
-allmetlist <- c("AUC","prAUC","Accuracy","Kappa","Balanced_Accuracy")
+if(length(unique(pull(train,params$classcol)))>2){
+  allmetlist <- c("AUC","prAUC","Accuracy","Kappa","Mean_Balanced_Accuracy")
+}else{
+allmetlist <- c("AUC","prAUC","Accuracy","Kappa","Balanced_Accuracy")}
 metlist <- c(params$metric,allmetlist[which(allmetlist!=params$metric)])
 
 #function to get the training metrics for the optimal parameter for each model

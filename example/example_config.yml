@@ -1,37 +1,38 @@
 ######################################
 # CaretSnakemake default config file
 ######################################
-#use complete paths when specifying inputs and outputs etc.
+
 #Analysis output directory
-Outdir: ""
+#this example is run from directory above example folder
+Outdir: "example/example_output"
 #path to this config file (only used to copy config into report)
-Configfile: ""
+Configfile: "example/example_config.yml"
 
 #Setting for preparing data structures to model
 Data:
  #data file to read in (samples as rows, features as columns, first row as col headers)
- file: ""
+ file: "example/iris_example.txt"
  #name of class column
- classcol: ""
+ classcol: "Species"
  #name of an columns to be removed (comma seperated list, e.g. sample names) (NULL for none)
  removecol: "NULL"
  #seed for random subsetting of data table
  seed: "808"
  #training percentage (how much of the data is training vs test)
- trainingper: "66"
+ trainingper: "70"
 
 #Modelling parameters
 Modelling:
  #comma seperated list of models to run (see caret docs for list of possibilities)
- modlist: "ada,glmnet,LogitBoost"
+ modlist: "ada,AdaBag,adaboost,bagEarth,bagEarthGCV,bagFDA,bagFDAGCV,bartMachine,blasso,BstLm,bstSm,C5.0,C5.0Cost,C5.0Rules,C5.0Tree,cforest,chaid,ctree,ctree2,cubist,deepboost,earth,enet,evtree,extraTrees,fda,gamboost,gbm_h2o,gbm,gcvEarth,glmnet_h2o,glmnet,glmStepAIC,J48,JRip,lars,lars2,lasso,LMT,LogitBoost,M5,M5Rules,msaenet,nodeHarvest,OneR,ordinalNet,ordinalRF,ORFlog,ORFpls,ORFridge,ORFsvm,pam,parRF,PART,penalized,PenalizedLDA,qrf,ranger,Rborist,relaxo,rf,rFerns,rfRules,rotationForest,rotationForestCp,rpart,rpart1SE,rpart2,rpartCost,rpartScore,rqlasso,rqnc,RRF,RRFglobal,sdwd,smda,sparseLDA,spikeslab,wsrf,xgbDART,xgbLinear,xgbTree"
  #comma seperate list of pre-processing to carry out before modelling (see caret docs for possibilities) (NULL for none)
  prepro: "scale,center"
  #maximum number of threads to use for each model
  threads: "4"
  #k for k cross fold validation
- cvk: "5"
+ cvk: "10"
  #number of times to repeat k cross fold validation
- cvrepeat: "5"
+ cvrepeat: "10"
  #method to chose optimal model from caret parameterisation
  selectfunction: "best"
  #seed to use for modelling
