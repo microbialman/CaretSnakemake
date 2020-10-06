@@ -6,7 +6,7 @@ date: "`r Sys.Date()`"
 params:
   classcol: NULL
   combinedlog: NULL 
-  metric: Kappa
+  metric: NULL
   outdir: NULL
   configfile: NULL
 ---
@@ -40,6 +40,14 @@ Training and testing datasets contained the following class sizes:
 #load in the data
 load(paste0(params$outdir,"/structured_data.rda"))
 
+#have to update for multiclass balanced accuracy
+modparam <- params$metric
+if(length(unique(pull(train,params$classcol)))>2){
+  if(params$metric=="Balanced_Accuracy"){
+    modparam="Mean_Balanced_Accuracy"
+  }
+}
+
 #tabulate classes in test and train
 tetr_size <- data.frame(class=c(as.character(train[,params$classcol]),as.character(test[,params$classcol])),set=c(rep("Train",nrow(train)),rep("Test",nrow(test))))
 
@@ -64,7 +72,7 @@ names(modlist) <- compmods
 
 ## Performance on training data
 
-Models were trained to maximise **`r params$metric`** and are ordered based on this metric in the following plots.
+Models were trained to maximise **`r modparam`** and are ordered based on this metric in the following plots.
 
 *Note: AUC values below are based on the multi-class AUC. For binary classifications the binary AUC is available below.*
 
@@ -76,7 +84,7 @@ if(length(unique(pull(train,params$classcol)))>2){
   allmetlist <- c("AUC","prAUC","Accuracy","Kappa","Mean_Balanced_Accuracy")
 }else{
 allmetlist <- c("AUC","prAUC","Accuracy","Kappa","Balanced_Accuracy")}
-metlist <- c(params$metric,allmetlist[which(allmetlist!=params$metric)])
+metlist <- c(modparam,allmetlist[which(allmetlist!=modparam)])
 
 #function to get the training metrics for the optimal parameter for each model
 getMetricsBest <- function(x){
@@ -105,7 +113,7 @@ getMetricsBest <- function(x){
 
 bestMets <- bind_rows(lapply(modlist,getMetricsBest)) %>% filter(!is.na(Train_Value))
 #order by the value of the training metric
-trmet <- bestMets %>% filter(Metric==params$metric) %>% arrange(Train_Value)
+trmet <- bestMets %>% filter(Metric==modparam) %>% arrange(Train_Value)
 bestMets$Model <- factor(bestMets$Model,levels=unique(trmet$Model))
 bestMets$ModMet <- paste0(bestMets$Model,bestMets$Metric)
 
@@ -121,7 +129,7 @@ train_fig <- plot_ly(
         type = 'filter',
         target = ~Metric,
         operation = '=',
-        value = params$metric
+        value = modparam
       )
   )
 )  %>% layout(title="Mean and SD of metric across n reapeated k-fold CV for optimal parameters.")
@@ -184,7 +192,7 @@ test_fig <- plot_ly(
         type = 'filter',
         target = ~Metric,
         operation = '=',
-        value = params$metric
+        value = modparam
       )
   )
 )
@@ -300,7 +308,7 @@ longvars_overall <- longvars %>% filter(Class=="Overall")
 longvars_class <- longvars %>% filter(Class!="Overall")
 
 #initiate the plots on the model with the highest rank training parameter across test and train
-sortcom <- combMets %>% filter(Metric==params$metric) %>%
+sortcom <- combMets %>% filter(Metric==modparam) %>%
   add_column(train_rank=rank(.$Train_Value),test_rank=rank(.$Test_Value),combrank=train_rank+test_rank) %>%
   arrange(desc(combrank))
 overallhighmod <- as.character(sortcom$Model[which(sortcom$Model%in%longvars_overall$Model)][1])
