@@ -23,7 +23,7 @@ Data:
 #Modelling parameters
 Modelling:
  #comma seperated list of models to run (see caret docs for list of possibilities)
- modlist: "ada,glmnet,LogitBoost"
+ modlist: "AdaBag,adaboost,bagEarth,bagEarthGCV,bagFDA,bagFDAGCV,bartMachine,blasso,BstLm,bstSm,C5.0,C5.0Cost,C5.0Rules,C5.0Tree,cforest,chaid,ctree,ctree2,cubist,deepboost,earth,enet,evtree,extraTrees,fda,gamboost,gbm_h2o,gbm,gcvEarth,glmnet_h2o,glmnet,glmStepAIC,lars,lars2,lasso,LogitBoost,msaenet,nodeHarvest,ordinalNet,ordinalRF,ORFlog,ORFpls,ORFridge,ORFsvm,pam,parRF,penalized,PenalizedLDA,qrf,ranger,Rborist,relaxo,rf,rFerns,rfRules,rotationForest,rotationForestCp,rpart,rpart1SE,rpart2,rpartCost,rpartScore,rqlasso,rqnc,RRF,RRFglobal,sdwd,sparseLDA,spikeslab,wsrf,xgbDART,xgbLinear,xgbTree"
  #comma seperate list of pre-processing to carry out before modelling (see caret docs for possibilities) (NULL for none)
  prepro: "scale,center"
  #maximum number of threads to use for each model

@@ -80,6 +80,8 @@ metlist <- c(params$metric,allmetlist[which(allmetlist!=params$metric)])
 
 #function to get the training metrics for the optimal parameter for each model
 getMetricsBest <- function(x){
+  #if hyperparameters fitted get the results from the chosen model
+  if(nrow(x$results)>1){
   bestparams <- x$bestTune
   paramstab <- x$results[colnames(bestparams)]
   bestrow <- NA
@@ -89,7 +91,10 @@ getMetricsBest <- function(x){
     }
   }
   met <- as.list(x$results[bestrow,which(colnames(x$results)%in%metlist)])
-  metsd <- as.list(x$results[bestrow,which(colnames(x$results)%in%paste0(metlist,"SD"))])
+  metsd <- as.list(x$results[bestrow,which(colnames(x$results)%in%paste0(metlist,"SD"))])}else{
+  met <- as.list(x$results[1,which(colnames(x$results)%in%metlist)])
+  metsd <- as.list(x$results[1,which(colnames(x$results)%in%paste0(metlist,"SD"))])
+  }
   met <- met[match(metlist,names(met))]
   met[sapply(met, is.null)] <- NA
   metsd <- metsd[match(paste0(metlist,"SD"),names(metsd))]
@@ -164,7 +169,7 @@ mcs <- function(x){
 
 #run each model on the test set
 predscores <- lapply(modlist, mcs)
-longscores <- bind_rows(predscores) %>% data.frame() %>% add_column(Model=names(predscores)) %>% gather("Metric","Test_Value",-Model) %>% filter(!is.na(Test_Value)) %>% add_column(ModMet=paste0(.$Model,.$Metric))
+longscores <- bind_rows(predscores) %>% data.frame() %>% add_column(Metric=names(predscores[[1]])) %>% pivot_longer(cols=-Metric,names_to = "Model", values_to = "Test_Value") %>% filter(!is.na(Test_Value)) %>% add_column(ModMet=paste0(.$Model,.$Metric))
 longscores <- longscores[match(bestMets$ModMet,longscores$ModMet),]
 combMets <- bestMets %>% add_column(Test_Value=longscores$Test_Value)
 
