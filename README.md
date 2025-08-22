@@ -3,7 +3,7 @@
 A [Snakemake](https://github.com/snakemake/snakemake) pipeline to automate training of multiple machine learning algorithms on a dataset using the [caret](https://github.com/topepo/caret) package.
 This enables concurrent training of multiple models on a compute cluster.
 
-CaretSnakemake employs the approach used in [caretEnsemble](https://github.com/zachmayer/caretEnsemble) and [SIMON](https://github.com/genular/simon-frontend), where the resampling of the data used to train models is fixed prior to training the various algorithms available within [caret](https://github.com/topepo/caret). This produces more comparable metrics to benchmark the performance of different algorithms against one another.
+CaretSnakemake employs the approach used in [caretEnsemble](https://github.com/zachmayer/caretEnsemble), where the resampling of the data used to train models is fixed prior to training the various algorithms available within [caret](https://github.com/topepo/caret). This produces more comparable metrics to benchmark the performance of different algorithms against one another.
 
 Data is split into a training and test set and resampled training datasets are defined for k-fold cross-validation (repeated n times).
 
